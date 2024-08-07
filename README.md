@@ -11,7 +11,7 @@ matplotlib, seaborn, pandas, numpy, scipy, pytorch
 After cloning the repo, please create and extra folders at the top level (in the same location as Analyses, Results, utils) called 'Models'. Inside of 'Models' create four folders 'context_offline', 'fits_offline', 'fits_online' and 'variance_offline'. 
 
 ### 3. Getting the data
-Download the dataset from DeepBlue here: [[https://deepblue.lib.umich.edu/data/concern/data_sets/bg257g01k]]
+Download the dataset from DeepBlue [here](https://deepblue.lib.umich.edu/data/concern/data_sets/bg257g01k).
 Move Data.zip into the repo, and extract it into a folder titled 'Data' in this location. The repo should now have a Data folder along with Analyses, Results, and utils. This data is already preprocessed, so leave the preprocessing flags in the main script as False, or the code will not run (as there is no access to the raw data)
 
 ## 3. Running the Code
