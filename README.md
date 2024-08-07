@@ -1,7 +1,7 @@
 # tcFNN analysis code for Temmar et al 20XX
 
 ## 1. Introduction
-The following code was used to produce all the figures used in 'Artificial neural network for brain-machine interface consistently produces more naturalistic finger movements than linear methods' by Temmar et al., currently on biorxiv (DOI: 10.1101/2024.03.01.583000, [[https://www.biorxiv.org/content/10.1101/2024.03.01.583000v1]]). In order to properly run this code, you will need the dataset (which we provide in a preprocessed form on DeepBlue, the University of Michigan's Data repository), along with a couple of extras. The repo has versions of the figures as they were last produced uploaded - The code outputs .pdf files, and minor aesthetic changes are then applied in Adobe Illustrator.
+The following code was used to produce all the figures used in 'Artificial neural network for brain-machine interface consistently produces more naturalistic finger movements than linear methods' by Temmar et al., currently on biorxiv (DOI: 10.1101/2024.03.01.583000, [click here](https://www.biorxiv.org/content/10.1101/2024.03.01.583000v1). In order to properly run this code, you will need the dataset (which we provide in a preprocessed form on DeepBlue, the University of Michigan's Data repository), along with a couple of extras. The repo has versions of the figures as they were last produced uploaded - The code outputs .pdf files, and minor aesthetic changes are then applied in Adobe Illustrator.
 
 ## 2. Setup
 ### 1. Packages required
