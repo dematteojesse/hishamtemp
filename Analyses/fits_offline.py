@@ -21,21 +21,29 @@ from utils.offline_data import datacleanup, splitOfflineData
 Addressing the first block of the paper: Do NNs fit better than other methods?
 - Offline Figure showing fit of predicted velocities of various approaches to hand control
 '''
-def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=True,
+def fits_offline(mk_name, date, runs, preprocess=True, train_rr=True, train_ds=True,
                          train_nn=True, genfig=True):
     #setup pytorch stuff
     device = torch.device('cuda:0')
     dtype = torch.float
 
     numFolds = 5
+
     # load and preprocess data if needed
     if preprocess:
-        run = 'Run-{}'.format(str(run).zfill(3))
-        fpath = os.path.join(config.serverpath, mk_name, date, run)
-        z = ZStructTranslator(fpath, numChans=config.numChans)
-        # remove unsuccessful trials
-        z = z.asdataframe()
-        z = z[z['TrialSuccess'] != 0]
+        print(type(runs))
+        for i in range(len(runs)):
+            run = 'Run-{}'.format(str(runs[i]).zfill(3))
+            fpath = os.path.join(config.serverpath, mk_name, date, run)
+            zadd = ZStructTranslator(fpath, numChans=config.numChans)
+            # remove unsuccessful trials
+            zadd = zadd.asdataframe()
+            zadd = zadd[zadd['TrialSuccess'] != 0]
+            if i == 0:
+                z = zadd
+            else:
+                z = pd.concat([z,zadd])
+        print(z.shape)
 
         #take middle 1000 trials and get z feats
         zsliced = sliceMiddleTrials(z, 600)
@@ -51,12 +59,12 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
 
         # get trialnumber for testDD
         trial_num = testDD['TrialNumber'][3:,0].astype(int)
-        with open(os.path.join(config.datadir,'fits_offline',f'data_{date}.pkl'), 'wb') as f:
+        with open(os.path.join(config.datadir,'fits_offline',f'data_{date}_{mk_name}.pkl'), 'wb') as f:
             pickle.dump((trainData, testData, inIDXList, outIDXList, trial_num), f)
     else:
         ## Load in saved data
         print('loading data')
-        with open(os.path.join(config.datadir,'fits_offline',f'data_{date}.pkl'), 'rb') as f:
+        with open(os.path.join(config.datadir,'fits_offline',f'data_{date}_{mk_name}.pkl'), 'rb') as f:
             trainData, testData, inIDXList, outIDXList, trial_num = pickle.load(f)
     print('data loaded')
 
@@ -69,11 +77,11 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
             vel = trainData['vel'][k]
             rr_models.append(offline_training.rrTrain(neu, vel, lbda=lbda))
         #save model
-        with open(os.path.join(config.modeldir,'fits_offline',f'RRmodel_{date}.pkl'), 'wb') as f:
+        with open(os.path.join(config.modeldir,'fits_offline',f'RRmodel_{date}_{mk_name}.pkl'), 'wb') as f:
             pickle.dump(rr_models, f)
         print('RR Decoders Saved')
     else:
-        with open(os.path.join(config.modeldir,'fits_offline',f'RRmodel_{date}.pkl'), 'rb') as f:
+        with open(os.path.join(config.modeldir,'fits_offline',f'RRmodel_{date}_{mk_name}.pkl'), 'rb') as f:
             rr_models = pickle.load(f)
         print('RR Decoders Loaded')
 
@@ -85,11 +93,11 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
             vel = trainData['vel'][k]
 
             ds_models.append(offline_training.dsTrain(neu, vel))
-        with open(os.path.join(config.modeldir, 'fits_offline', f'DSmodel_{date}.pkl'), 'wb') as f:
+        with open(os.path.join(config.modeldir, 'fits_offline', f'DSmodel_{date}_{mk_name}.pkl'), 'wb') as f:
             pickle.dump(ds_models, f)
         print('DS Decoders Saved')
     else:
-        with open(os.path.join(config.modeldir, 'fits_offline', f'DSmodel_{date}.pkl'), 'rb') as f:
+        with open(os.path.join(config.modeldir, 'fits_offline', f'DSmodel_{date}_{mk_name}.pkl'), 'rb') as f:
             ds_models = pickle.load(f)
         print('DS Decoders Loaded')
 
@@ -135,11 +143,11 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
 
         print(f'tcFNN models trained.')
         # save decoders and scalers
-        with open(os.path.join(config.modeldir, 'fits_offline', f'tcFNNmodels_{date}.pkl'), 'wb') as f:
+        with open(os.path.join(config.modeldir, 'fits_offline', f'tcFNNmodels_{date}_{mk_name}.pkl'), 'wb') as f:
             pickle.dump((nn_models, scalers), f)
         print('tcFNN models Saved')
     else:
-        with open(os.path.join(config.modeldir, 'fits_offline', f'tcFNNmodels_{date}.pkl'), 'rb') as f:
+        with open(os.path.join(config.modeldir, 'fits_offline', f'tcFNNmodels_{date}_{mk_name}.pkl'), 'rb') as f:
             nn_models, scalers = pickle.load(f)
         print('NN Decoders Loaded')
 
@@ -186,7 +194,7 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
                   'mean_hi':[],'mean_lo':[],'kl_div':[], 'decoder':[], 'fold':[]}
 
     # TODO: FOR NEETHAN - USE THE FILE SAVED HERE TO LOAD PREDICTIONS AND TRUE MOVEMENTS AND CALCULATE COHERENCE
-    with open(os.path.join(config.resultsdir, 'fits_offline', f'offlineFitPrediction_{date}.pkl'), 'wb') as f:
+    with open(os.path.join(config.resultsdir, 'fits_offline', f'offlineFitPrediction_{date}_{mk_name}.pkl'), 'wb') as f:
         pickle.dump((preds, vel_test), f)
 
     for k in np.arange(numFolds):
@@ -306,16 +314,16 @@ def fits_offline(mk_name, date, run, preprocess=True, train_rr=True, train_ds=Tr
 
     return metrics, fitFig, mseax, klax
 
-def fits_offline_partII(results, mseax, klax):
+def fits_offline_partII(mk_name, results, mseax, klax):
     # summarize results within days
 
     rr_summary = results.loc[results['decoder'] == 'rr', :].groupby(level='date').describe()
     ds_summary = results.loc[results['decoder'] == 'ds', :].groupby(level='date').describe()
     nn_summary = results.loc[results['decoder'] == 'nn', :].groupby(level='date').describe()
 
-    rr_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', 'rr_summary.csv'))
-    ds_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', 'ds_summary.csv'))
-    nn_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', 'nn_summary.csv'))
+    rr_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', f'rr_summary_{mk_name}.csv'))
+    ds_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', f'ds_summary_{mk_name}.csv'))
+    nn_summary.to_csv(os.path.join(config.resultsdir, 'fits_offline', f'nn_summary_{mk_name}.csv'))
 
     def dopairedstats(metric, althypo, ):
         rrm = results.loc[results['decoder'] == 'rr', metric].droplevel('indayidx')
@@ -348,12 +356,12 @@ def fits_offline_partII(results, mseax, klax):
     sns.barplot(data=results, x='decoder',y='kl_div',palette=config.offlinePalette,
                 hue_order=('rr','nn','ds'), ax=klax, errorbar='se')
 
-    mseax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4],title='B. Open-loop prediction error', ylabel='Mean-Squared Error',
+    mseax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4],title='B. Open-loop error', ylabel='Mean-Squared Error',
               xticklabels=['RR', 'DS', 'tcFNN'])
     klax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4], title='D. Decoder fit to true distribution', ylabel='KL-Divergence',
              xticklabels=['RR', 'DS', 'tcFNN'])
 
     offlineFitResults = pd.DataFrame(offlineFitResults, index=metricstotest)
-    offlineFitResults.to_csv(os.path.join(config.resultsdir, 'fits_offline', 'offlineFitResults.csv'))
+    offlineFitResults.to_csv(os.path.join(config.resultsdir, 'fits_offline', f'offlineFitResults_{mk_name}.csv'))
 
     return

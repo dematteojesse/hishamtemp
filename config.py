@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib as mpl
 import torch
 from matplotlib import font_manager
-import seaborn as sns
+#import seaborn as sns
 import os
 #some basic text parameters for figures
 mpl.rcParams['font.family'] = "Atkinson Hyperlegible" # if installed but not showing up, rebuild mpl cache
