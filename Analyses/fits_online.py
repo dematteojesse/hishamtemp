@@ -19,31 +19,58 @@ def fits_online(serverpath, mk_name, date, runs, decoderlabels, trimlength = 5, 
     if preprocess: # preprocess here is pretty light, just loading/creating z structs and saving them.
         # run through each day, load the runs, get z structs as dataframes, append to list. then, concatenate into
         # one large dataframe and save it out.
-        zlist = []
-        for i in np.arange(len(runs)):
-            run = 'Run-{}'.format(str(runs[i]).zfill(3))
-            fpath = os.path.join(serverpath, mk_name, date, run)
+        if mk_name == 'Joker':
+            zlist = []
+            for i in np.arange(len(runs)):
+                run = 'Run-{}'.format(str(runs[i]).zfill(3))
+                fpath = os.path.join(serverpath, mk_name, date, run)
 
-            z = ZStructTranslator(fpath, numChans=96, verbose=True)
-            z = z.asdataframe()
-            if decoderlabels[i] != 'HC': # if not a hand control run, filter by only decoder on trials.
-                z = z[z['ClosedLoop'] == True] #make sure decode is on as well
-            z = z[trimlength:]
-            z = z[z['TrialSuccess'] == True] # filter out unsuccessful trials
-            z = z[z['BlankTrial'] == False] # remove blank trial
+                z = ZStructTranslator(fpath, numChans=96, verbose=True)
+                z = z.asdataframe()
+                if decoderlabels[i] != 'HC': # if not a hand control run, filter by only decoder on trials.
+                    z = z[z['ClosedLoop'] == True] #make sure decode is on as well
+                z = z[trimlength:]
+                z = z[z['TrialSuccess'] == True] # filter out unsuccessful trials
+                z = z[z['BlankTrial'] == False] # remove blank trial
 
-            z['Decoder'] = decoderlabels[i] # add decoder label to dataframe
-            z['Run'] = run
-            zlist.append(z)
-        z_all = pd.concat(zlist, axis=0) #concatenate list into one large dataframe
-        z_all = z_all.reset_index()
-        z_all.to_pickle(os.path.join(config.datadir, 'fits_online', f'data_{date}.pkl'))
-        print('data saved')
+                z['Decoder'] = decoderlabels[i] # add decoder label to dataframe
+                z['Run'] = run
+                zlist.append(z)
+            z_all = pd.concat(zlist, axis=0) #concatenate list into one large dataframe
+            z_all = z_all.reset_index()
+            z_all.to_pickle(os.path.join(config.datadir, 'fits_online', f'data_{date}_{mk_name}.pkl'))
+            print('data saved')
+        else:
+            zlist = []
+            for i in np.arange(len(date)):
+                for j in np.arange(len(runs[i])):
+                    run = 'Run-{}'.format(str(runs[i][j]).zfill(3))
+                    fpath = os.path.join(serverpath, mk_name, date[i], run)
+                    print(fpath)
 
+                    z = ZStructTranslator(fpath, numChans=96, verbose=True)
+                    z = z.asdataframe()
+                    if decoderlabels[i][j] != 'HC': # if not a hand control run, filter by only decoder on trials.
+                        z = z[z['ClosedLoop'] == True] #make sure decode is on as well
+                    z = z[trimlength:]
+                    z = z[z['TrialSuccess'] == True] # filter out unsuccessful trials
+                    z = z[z['BlankTrial'] == False] # remove blank trial
+
+                    z['Decoder'] = decoderlabels[i][j] # add decoder label to dataframe
+                    z['Run'] = run
+                    zlist.append(z)
+            z_all = pd.concat(zlist, axis=0) #concatenate list into one large dataframe
+            z_all = z_all.reset_index()
+            z_all.to_pickle(os.path.join(config.datadir, 'fits_online', f'data_{mk_name}.pkl'))
+            print('data saved')
     else:
         ## Load in saved data
-        z_all = pd.read_pickle(os.path.join(config.datadir, 'fits_online', f'data_{date}.pkl'))
-        print('data loaded')
+        if mk_name == 'Joker':
+            z_all = pd.read_pickle(os.path.join(config.datadir, 'fits_online', f'data_{date}_{mk_name}.pkl'))
+            print('data loaded')
+        else:
+            z_all = pd.read_pickle(os.path.join(config.datadir, 'fits_online', f'data_{mk_name}.pkl'))
+            print('data loaded')
 
     # Figure Setup - Create figure and Subfigures
     onlinefitfig = plt.figure(figsize=(14,7))
@@ -69,13 +96,17 @@ def fits_online(serverpath, mk_name, date, runs, decoderlabels, trimlength = 5, 
         online_metrics.plotOnlinePositions(z, ax=posax)
         posax.set(ylabel='Extension (%)',xlabel=None, yticks=[0,25,50,75,100]) # check if flex or extend
         posax.set(title=decoder)
+    
+    print(np.shape(z_RK))
+    print(np.shape(z_RN))
+    print(np.shape(z_HC))
     plotOnlineTraces(z_RK[100:110],posaxs[1],"ReFIT KF (RK)")
     plotOnlineTraces(z_RN[102:112],posaxs[2],"Re-tcFNN (RN)")
     plotOnlineTraces(z_HC[100:110], posaxs[0], "Hand Control (HC)")
 
     # plot settings
-    posaxs[1].legend()
-    posaxs[1].get_legend().legendHandles[0].set(edgecolor='k',facecolor=None)
+    # posaxs[1].legend()
+    # posaxs[1].get_legend().legend_handles[0].set(edgecolor='k',facecolor=None)
     posaxs[2].set(xlabel='Time (sec)')
 
     for ax,color in zip(posaxs, [config.hcColor, config.kfColor, config.nnColor]):
@@ -125,14 +156,19 @@ def fits_online(serverpath, mk_name, date, runs, decoderlabels, trimlength = 5, 
     (tt, rt, ot) = online_metrics.calcTrialTimes(z_all, offBy2=offby2)
     clMetrics = pd.DataFrame(data={'TimeToTarget': rt, 'OrbitTime': ot})
     clMetrics['Decoder'] = z_all['Decoder']
-    clMetrics.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitmetrics_{date}.pkl'))
+    if mk_name == 'Joker':
+        clMetrics.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitmetrics_{date}_{mk_name}.pkl'))
+    else:
+        clMetrics.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitmetrics_{mk_name}.pkl'))
 
     kldivs = pd.DataFrame(data=kldivs)
-    kldivs.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitdivs_{date}.pkl'))
-
+    if mk_name == 'Joker':
+        kldivs.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitdivs_{date}_{mk_name}.pkl'))
+    else:
+        kldivs.to_pickle(os.path.join(config.resultsdir, 'fits_online', f'onlinefitdivs_{mk_name}.pkl'))
     return kldivs, metricaxs, dist_tops, onlinefitfig, clMetrics
 
-def fits_online_partII(kldivs, ax, results):
+def fits_online_partII(mk_name, kldivs, ax, results):
     metricax = ax[0]
     distax = ax[1]
 
@@ -162,13 +198,13 @@ def fits_online_partII(kldivs, ax, results):
         day_summaries.append(pd.concat((tt,ot,orb),keys=('TT','OT','OR'),axis=1))
 
     
-    kldivs.to_csv(os.path.join(config.resultsdir, 'fits_online', 'kl_divs_w_counts.csv'))
+    kldivs.to_csv(os.path.join(config.resultsdir, 'fits_online', f'kl_divs_w_counts_{mk_name}.csv'))
     kldivs = kldivs.pivot(index='date',columns='Decoder',values='div').rename(columns={'RN':'div_RN','RK':'div_RK'})
     day_summaries = pd.concat(day_summaries, axis=0, keys=kldivs.index)
 
     # save results
-    day_summaries.to_csv(os.path.join(config.resultsdir, 'fits_online', 'online_fit_results.csv'))
-    kldivs.to_csv(os.path.join(config.resultsdir, 'fits_online', 'kl_divs.csv'))
+    day_summaries.to_csv(os.path.join(config.resultsdir, 'fits_online', f'online_fit_results_{mk_name}.csv'))
+    kldivs.to_csv(os.path.join(config.resultsdir, 'fits_online', f'kl_divs_{mk_name}.csv'))
 
     # do stats across days
     def runttest_ind(results, metric, althypo):
@@ -199,7 +235,7 @@ def fits_online_partII(kldivs, ax, results):
                           'std':[0,0]})
     
     crossdayresults = pd.concat((tt_output, ot_output, op_df), keys=['tt','ot','or'])
-    crossdayresults.to_csv(os.path.join(config.resultsdir, 'fits_online', 'cross_day_metrics.csv'))
+    crossdayresults.to_csv(os.path.join(config.resultsdir, 'fits_online', f'cross_day_metrics_{mk_name}.csv'))
     
     # difference of proportions test
     # null hypothesis, 0 difference in proportion
@@ -212,7 +248,7 @@ def fits_online_partII(kldivs, ax, results):
 
     #consolidate and save results
     statsout = pd.Series(data={'RN TT < RK TT':tt_test.pvalue, 'RN OT != RK OT':ot_test.pvalue, 'RN OR > RK OR':pval})
-    statsout.to_csv(os.path.join(config.resultsdir,'fits_online','stats.csv'))
+    statsout.to_csv(os.path.join(config.resultsdir,'fits_online',f'stats_{mk_name}.csv'))
 
     # PLOTTING
     # add average kl-div across days to distribution plots
@@ -220,10 +256,16 @@ def fits_online_partII(kldivs, ax, results):
     klstds = kldivs.std(axis=0)
 
     textpos = (0.5, 0.65)
-    distax[0].text(textpos[0], textpos[1], f" Mean KL-div from HC (over 3 days):\n {klmeans.iloc[0]:.2f} +/- {klstds.iloc[0]:.2f}",
-                   transform=distax[0].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
-    distax[1].text(textpos[0], textpos[1], f"Mean KL-div from HC:\n {klmeans.iloc[1]:.2f} +/- {klstds.iloc[1]:.2f}",
-                   transform=distax[1].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
+    if mk_name == "Joker":
+        distax[0].text(textpos[0], textpos[1], f" Mean KL-div from HC (over 3 days):\n {klmeans.iloc[0]:.2f} +/- {klstds.iloc[0]:.2f}",
+                    transform=distax[0].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
+        distax[1].text(textpos[0], textpos[1], f"Mean KL-div from HC:\n {klmeans.iloc[1]:.2f} +/- {klstds.iloc[1]:.2f}",
+                    transform=distax[1].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
+    else:
+        distax[0].text(textpos[0], textpos[1], f" KL-div from HC:\n {klmeans.iloc[0]:.2f}",
+                    transform=distax[0].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
+        distax[1].text(textpos[0], textpos[1], f"KL-div from HC:\n {klmeans.iloc[1]:.2f}",
+                    transform=distax[1].transAxes, fontsize=mpl.rcParams['axes.labelsize'], ha='center')
 
     # bar plots for time to target, orbiting rate, nonzero orbiting time
     sns.barplot(results.where(results['TimeToTarget'] != 0), x='TimeToTarget', y='Decoder', errorbar='se', ax=metricax[0],
@@ -234,10 +276,17 @@ def fits_online_partII(kldivs, ax, results):
                 palette=config.onlinePalette[[0, 2, 1], :])
 
     # plot settings
-    metricax[0].set(title='Time-to-target', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
-                  xticks=[0, 750, 1500], xticklabels=[0, .75, 1.5])
-    metricax[1].set(title='Orbiting rate', ylabel=None, xlabel='Proportion',
-               xticks=[0, .5, 1])
-    metricax[2].set(title='Nonzero orbit time', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
+    if mk_name == "Joker":
+        metricax[0].set(title='Time-to-target', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
                     xticks=[0, 750, 1500], xticklabels=[0, .75, 1.5])
-
+        metricax[1].set(title='Orbiting rate', ylabel=None, xlabel='Proportion',
+                xticks=[0, .5, 1])
+        metricax[2].set(title='Nonzero orbit time', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
+                        xticks=[0, 750, 1500], xticklabels=[0, .75, 1.5])
+    else:
+        metricax[0].set(title='Time-to-target', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
+                    xticks=[0, 1500, 3000], xticklabels=[0, 1.5, 3])
+        metricax[1].set(title='Orbiting rate', ylabel=None, xlabel='Proportion',
+                xticks=[0, .5, 1])
+        metricax[2].set(title='Nonzero orbit time', ylabel=None, xlabel='Time (s)', xlim=(0, 1500),
+                        xticks=[0, 1000, 2000], xticklabels=[0, 1, 2])

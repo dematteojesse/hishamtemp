@@ -43,12 +43,16 @@ def fits_offline(mk_name, date, runs, preprocess=True, train_rr=True, train_ds=T
                 z = zadd
             else:
                 z = pd.concat([z,zadd])
-        print(z.shape)
 
         #take middle 1000 trials and get z feats
-        zsliced = sliceMiddleTrials(z, 600)
-        trainDD = getZFeats(zsliced[0:500], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature'])
-        testDD = getZFeats(zsliced[500:], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature','TrialNumber'])
+        if mk_name == 'Batman':
+            zsliced = sliceMiddleTrials(z, 400)
+            trainDD = getZFeats(zsliced[0:300], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature'])
+            testDD = getZFeats(zsliced[300:], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature','TrialNumber'])
+        else:
+            zsliced = sliceMiddleTrials(z, 600)
+            trainDD = getZFeats(zsliced[0:500], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature'])
+            testDD = getZFeats(zsliced[500:], config.binsize, featList=['FingerAnglesTIMRL', 'NeuralFeature','TrialNumber'])
 
         # separate feats, add time history, add a column of ones for RR, and reshape data for NN.
         pretrainData = datacleanup(trainDD)
@@ -103,7 +107,10 @@ def fits_offline(mk_name, date, runs, preprocess=True, train_rr=True, train_ds=T
 
     ## Train tcFNN decoder
     if train_nn:
-        epochs = 10
+        if mk_name == 'Batman':
+            epochs = 10
+        else:
+            epochs = 10
         nn_models = []
         scalers = []
         for k in np.arange(numFolds):
@@ -244,8 +251,10 @@ def fits_offline(mk_name, date, runs, preprocess=True, train_rr=True, train_ds=T
 
         distspec = subfigs[1,0].subgridspec(2,3)
         klax = fitFig.add_subplot(subfigs[1,1])
-
-        plotrange = np.arange(1499, 1562)
+        if mk_name == 'Batman':
+            plotrange = np.arange(999, 1062)
+        else:
+            plotrange = np.arange(1499, 1562)
         times = plotrange * config.binsize / sec
         histwidth = 3
 
@@ -355,9 +364,12 @@ def fits_offline_partII(mk_name, results, mseax, klax):
     # Plot KL-Divergence over folds and over days
     sns.barplot(data=results, x='decoder',y='kl_div',palette=config.offlinePalette,
                 hue_order=('rr','nn','ds'), ax=klax, errorbar='se')
-
-    mseax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4],title='B. Open-loop error', ylabel='Mean-Squared Error',
-              xticklabels=['RR', 'DS', 'tcFNN'])
+    if mk_name == 'Batman':
+        mseax.set(ylim=[0, .45], yticks=[0, 0.4, 0.8],title='B. Open-loop error', ylabel='Mean-Squared Error',
+                xticklabels=['RR', 'DS', 'tcFNN'])
+    else:
+        mseax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4],title='B. Open-loop error', ylabel='Mean-Squared Error',
+                xticklabels=['RR', 'DS', 'tcFNN'])
     klax.set(ylim=[0, .45], yticks=[0, 0.2, 0.4], title='D. Decoder fit to true distribution', ylabel='KL-Divergence',
              xticklabels=['RR', 'DS', 'tcFNN'])
 
