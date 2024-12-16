@@ -85,8 +85,8 @@ if run_section:
     results = pd.concat(results, keys=dates, names=['date', 'indayidx']).reset_index()
     kldivs = pd.concat(kldivs, keys=dates, names=['date'],axis=0).reset_index().drop('level_1',axis=1)
 
-    fits_online_partII(kldivs, finalax, results)
-    finalfig.savefig(os.path.join(config.resultsdir,'fits_online',f'onlineFitFigure_{dates[0]}.pdf'))
+    fits_online_partII(mk_name, kldivs, finalax, results)
+    finalfig.savefig(os.path.join(config.resultsdir,'fits_online',f'onlineFitFigure_{dates[0]}_{mk_name}.pdf'))
 
 # Offline tcFNN Training Variance ######################################################################################
 run_section = False
@@ -213,21 +213,32 @@ plt.show()
 ## Repeat analyses for Wayne ###########################################################################################
 
 ## Offline Fit of Velocity Distribution ################################################################################
-run_section = False
+run_section = True
 if run_section:
     mk_name = 'Batman'
-
+    """
     dates = ['2021-04-14',
             '2021-06-08',
             '2021-07-06',
             '2021-06-23']
-    runlist = [[2,3],
+    runlist = [[2],
                [2,3,4],
                [2,3,4],
                [3,6]]
+    """
+    """
+    dates = ['2020-11-21',
+            '2020-12-08',
+            '2020-12-23']
+    runlist = [[3,13],
+               [3],
+               [4]]
+    """
+    dates = ['2020-12-05']
+    runlist = [[3]]
     run_part1 = True
     finalfig = None
-    fignum = 2
+    fignum = 0
     if run_part1:
         results = []
         for i in range(len(dates)):
@@ -236,8 +247,8 @@ if run_section:
 
             genfig = i == fignum
 
-            metrics, fitfig, mseax, klax = fits_offline(mk_name, date, runs, preprocess=False, train_rr=False,
-                                                        train_ds=False, train_nn=False, genfig=genfig)
+            metrics, fitfig, mseax, klax = fits_offline(mk_name, date, runs, preprocess=True, train_rr=True,
+                                                        train_ds=True, train_nn=True, genfig=genfig)
             results.append(metrics)
 
             if genfig:
@@ -258,42 +269,36 @@ if run_section:
 run_section = False
 if run_section:
     mk_name = 'Batman'
-    dates = ['2020-09-12',
-             '2020-09-19',
-             '2021-07-31'] #add another opt day
-    runs = [[3, 10, 11, 12, 13],
-            [4, 10, 11, 12, 13],
-            [3, 7, 8, 9, 10]]
-    decoderlabels = [['HC', 'RN', 'RK', 'RN', 'RK'],
-                     ['HC', 'RK', 'RN', 'RK', 'RN'],
-                     ['HC', 'RN', 'RK', 'RN', 'RK']]
-    offby2 = [True, True, False]
+    dates = ['2020-11-21',
+             '2020-12-08'] #add another opt day
+    runs = [[3, 8, 12, 13],
+            [3, 7, 10]]
+    decoderlabels = [['HC', 'RN', 'RN', 'HC'], 
+                     ['HC', 'RK', 'RK']]
+    offby2 = True
     kldivs= []
     finalfig = None
     finalax = None
-    
+
     results = []
-    for i, (date, run, dclabs, off2) in enumerate(zip(dates, runs, decoderlabels, offby2)):
-        genfig = i == 2
+    
+    kldiv, ax, distaxs, fig, metrics = fits_online(config.serverpath, mk_name, dates, runs, decoderlabels, offby2=offby2,
+                                            preprocess=False)
+    kldivs.append(kldiv)
 
-        kldiv, ax, distaxs, fig, metrics = fits_online(config.serverpath, mk_name, date, run, dclabs, offby2=off2,
-                                              preprocess=False)
-        kldivs.append(kldiv)
+    results.append(metrics)
 
-        results.append(metrics)
-        if genfig:
-            finalfig = fig
-            finalax = (ax, distaxs)
-        else:
-            plt.close(fig)
+    finalfig = fig
+    finalax = (ax, distaxs)
+
     results = pd.concat(results, keys=dates, names=['date', 'indayidx']).reset_index()
     kldivs = pd.concat(kldivs, keys=dates, names=['date'],axis=0).reset_index().drop('level_1',axis=1)
 
-    fits_online_partII(kldivs, finalax, results)
-    finalfig.savefig(os.path.join(config.resultsdir,'fits_online',f'onlineFitFigure_{dates[0]}.pdf'))
+    fits_online_partII(mk_name, kldivs, finalax, results)
+    finalfig.savefig(os.path.join(config.resultsdir,'fits_online',f'onlineFitFigure_{mk_name}.pdf'))
 
 # Offline tcFNN Training Variance ######################################################################################
-run_section = True
+run_section = False
 
 # take four days of offline data - same days as used for offline fit section
 if run_section:
